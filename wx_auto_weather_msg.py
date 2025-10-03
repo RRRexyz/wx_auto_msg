@@ -5,6 +5,7 @@ import time
 import jwt
 from dotenv import load_dotenv
 import os
+import sys
 
 # 加载环境变量
 load_dotenv()
@@ -14,12 +15,11 @@ api_host = os.getenv("API_HOST")
 private_key = os.getenv("QWEATHER_PRIVATE_KEY")
 qweather_sub = os.getenv("QWEATHER_SUB")
 qweather_kid = os.getenv("QWEATHER_KID")
-qweather_location = os.getenv("QWEATHER_LOCATION")
 
 # 企业微信机器人配置
 webhook_url = os.getenv("WECHAT_WEBHOOK_URL")
 
-def get_payload():
+def get_payload() -> dict:
     """生成JWT payload"""
     return {
         'iat': int(time.time()) - 30,
@@ -27,13 +27,26 @@ def get_payload():
         'sub': qweather_sub
     }
 
-def get_headers():
+
+def get_headers() -> dict:
     """生成JWT headers"""
     return {
         'kid': qweather_kid
     }
 
-def send_wecom_message(content, msg_type="text"):
+
+def get_location_id(location_name: str) -> str:
+    """通过城市名称获取城市ID"""
+    # Generate JWT token
+    token = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers=get_headers())
+    response = httpx.get(
+        f"https://{api_host}/geo/v2/city/lookup?location={location_name}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    return response.json()["location"][0]["id"]
+
+
+def send_wecom_message(content: str, msg_type: str = "text") -> bool:
     """发送企业微信机器人消息"""
     headers = {"Content-Type": "application/json"}
     
@@ -49,20 +62,20 @@ def send_wecom_message(content, msg_type="text"):
         }
     
     try:
-        # response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
         response = httpx.post(webhook_url, headers=headers, data=json.dumps(payload))
         return response.json().get("errcode") == 0
     except Exception as e:
         print(f"企业微信推送失败: {str(e)}")
         return False
 
-def daily_weather_report():
+
+def daily_weather_report(location_name: str, location_id: str) -> None:
     """通过和风天气API获取未来3天天气预报并发送"""
     # Generate JWT
     encoded_jwt = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers = get_headers())
     
     weather = httpx.get(
-        f"https://{api_host}/v7/weather/3d?location={qweather_location}",
+        f"https://{api_host}/v7/weather/3d?location={location_id}",
         headers={"Authorization": f"Bearer {encoded_jwt}"}
     )
 
@@ -91,19 +104,19 @@ def daily_weather_report():
                 "天气": f"{item['textDay']}转{item['textNight']}" if item["textDay"]!= item["textNight"] else item["textDay"],
                 "气温": f"{item['tempMin']}~{item['tempMax']}℃"
             }
-    markdown_content = f"**📊 未来三天天气**" + \
+    markdown_content = f"**📊 {location_name}未来三天天气**" + \
         f"\n今天：\n- 日期：{today_weather['日期']}\n- 天气：{today_weather['天气']}\n- 气温：{today_weather['气温']}" + \
         f"\n\n明天：\n- 日期：{tomorrow_weather['日期']}\n- 天气：{tomorrow_weather['天气']}\n- 气温：{tomorrow_weather['气温']}" + \
         f"\n\n后天：\n- 日期：{after_weather['日期']}\n- 天气：{after_weather['天气']}\n- 气温：{after_weather['气温']}"
     send_wecom_message(markdown_content, "markdown")
 
 
-def now_weather_report():
+def now_weather_report(location_name: str, location_id: str) -> None:
     """通过和风天气API获取实时天气并发送"""
     # Generate JWT
     encoded_jwt = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers = get_headers())
     weather = httpx.get(
-        f"https://{api_host}/v7/weather/now?location={qweather_location}",
+        f"https://{api_host}/v7/weather/now?location={location_id}",
         headers={"Authorization": f"Bearer {encoded_jwt}"}
     )
 
@@ -114,7 +127,7 @@ def now_weather_report():
     }
     
     # 构建消息内容
-    markdown_content = f"🌤️ **实时天气**\n\n" \
+    markdown_content = f"🌤️ **{location_name}实时天气**\n\n" \
             f"📅 时间：{now_weather['时间']}\n" \
             f"☁️ 天气：{now_weather['天气']}\n" \
             f"🌡️ 气温：{now_weather['气温']}"
@@ -124,14 +137,21 @@ def now_weather_report():
 if __name__ == "__main__":
     scheduler = BlockingScheduler()
     
+    if len(sys.argv) < 2:
+        print("Usage: uv run wx_auto_weather_msg.py 'location_name'")
+        sys.exit(1)
+    
+    location_name = sys.argv[1]
+    location_id = get_location_id(location_name)
+    
     # 每天7：30发送未来3天天气预报
-    scheduler.add_job(daily_weather_report, 'cron', hour=7, minute=30)
+    scheduler.add_job(daily_weather_report, args=[location_name, location_id], trigger='cron', hour=7, minute=30)
     
     # 每天19:30发送未来3天天气预报
-    scheduler.add_job(daily_weather_report, 'cron', hour=19, minute=30)
+    scheduler.add_job(daily_weather_report, args=[location_name, location_id], trigger='cron', hour=19, minute=30)
     
     # 每个整点发送实时天气
-    scheduler.add_job(now_weather_report, 'cron', minute=0)
+    scheduler.add_job(now_weather_report, args=[location_name, location_id], trigger='cron', minute=0)
     
     # 测试消息
     send_wecom_message("定时任务服务已启动 ✅", "text")

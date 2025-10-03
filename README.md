@@ -8,7 +8,6 @@ API_HOST="xxxxxxxxx.re.qweatherapi.com"
 QWEATHER_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nxxxxxxxxxxxxxx\n-----END PRIVATE KEY-----"
 QWEATHER_SUB="xxxxxxxxxx"
 QWEATHER_KID="xxxxxxxxxx"
-QWEATHER_LOCATION="xxxxxxxx"
 
 # 企业微信机器人配置
 WECHAT_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxxx"
@@ -38,17 +37,6 @@ openssl pkey -pubout -in ed25519-private.pem > ed25519-public.pem
 
 在项目管理页面点击“创建凭据”，选择“身份认证”，选择"JSON Web Token"认证方式，将公钥文件中的内容（包含`-----BEGIN PUBLIC KEY-----`和`-----END PUBLIC KEY-----`）添加到“上传公钥”输入框中，然后点击保存。此时会生成一个凭证ID，将凭证ID赋值给`QWEATHER_KID`变量。
 
-### 配置查询位置
-打开`get_location_id.py`文件，拉到最下面，将
-```python
-if __name__ == '__main__':
-    location_id =get_location_id("济南")
-    print(location_id)
-```
-中的城市改为要查询的城市（中文或拼音应该都可以）。运行该脚本，可以得到该城市的`location_id`。
-
-然后将得到的城市`location_id`赋值给`QWEATHER_LOCATION`变量。
-
 ## 定时任务配置
 打开`wx_auto_weather_msg.py`文件，拉到最下面，找到`scheduler.add_job`方法，按照自己的需求修改定时任务的设置。例如：
 ```python
@@ -56,9 +44,9 @@ scheduler.add_job(daily_weather_report, 'cron', hour=7, minute=30)
 ```
 
 ## 部署
-将项目连带`.env`文件上传到服务器，然后运行`wx_auto_weather_msg.py`脚本，可以用`nohup`命令保活：
+将项目连带`.env`文件上传到服务器，然后运行`wx_auto_weather_msg.py`脚本，带上地名参数，可以用`nohup`命令保活，例如：
 ```bash
-nohup uv run wx_auto_weather_msg.py &
+nohup uv run wx_auto_weather_msg.py "济南" &
 ```
 
 ---
