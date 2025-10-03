@@ -10,6 +10,7 @@ import os
 load_dotenv()
 
 # 从环境变量获取和风天气相关配置项
+api_host = os.getenv("API_HOST")
 private_key = os.getenv("QWEATHER_PRIVATE_KEY")
 qweather_sub = os.getenv("QWEATHER_SUB")
 qweather_kid = os.getenv("QWEATHER_KID")
@@ -61,7 +62,7 @@ def daily_weather_report():
     encoded_jwt = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers = get_headers())
     
     weather = httpx.get(
-        f"https://n53md8tnak.re.qweatherapi.com/v7/weather/3d?location={qweather_location}",
+        f"https://{api_host}/v7/weather/3d?location={qweather_location}&days=3",
         headers={"Authorization": f"Bearer {encoded_jwt}"}
     )
 
@@ -102,7 +103,7 @@ def now_weather_report():
     # Generate JWT
     encoded_jwt = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers = get_headers())
     weather = httpx.get(
-        f"https://n53md8tnak.re.qweatherapi.com/v7/weather/now?location={qweather_location}",
+        f"https://{api_host}/v7/weather/now?location={qweather_location}",
         headers={"Authorization": f"Bearer {encoded_jwt}"}
     )
 
