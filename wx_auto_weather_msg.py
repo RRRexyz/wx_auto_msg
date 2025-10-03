@@ -126,6 +126,9 @@ if __name__ == "__main__":
     # 每天7：30发送未来3天天气预报
     scheduler.add_job(daily_weather_report, 'cron', hour=7, minute=30)
     
+    # 每天19:30发送未来3天天气预报
+    scheduler.add_job(daily_weather_report, 'cron', hour=19, minute=30)
+    
     # 每个整点发送实时天气
     scheduler.add_job(now_weather_report, 'cron', minute=0)
     
