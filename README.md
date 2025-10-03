@@ -40,7 +40,8 @@ openssl pkey -pubout -in ed25519-private.pem > ed25519-public.pem
 ## 定时任务配置
 打开`wx_auto_weather_msg.py`文件，拉到最下面，找到`scheduler.add_job`方法，按照自己的需求修改定时任务的设置。例如：
 ```python
-scheduler.add_job(daily_weather_report, 'cron', hour=7, minute=30)
+# 每天7：30发送未来3天天气预报
+scheduler.add_job(daily_weather_report, args=[location_name, location_id], trigger='cron', hour=7, minute=30)
 ```
 
 ## 部署
