@@ -62,7 +62,7 @@ def daily_weather_report():
     encoded_jwt = jwt.encode(get_payload(), private_key, algorithm='EdDSA', headers = get_headers())
     
     weather = httpx.get(
-        f"https://{api_host}/v7/weather/3d?location={qweather_location}&days=3",
+        f"https://{api_host}/v7/weather/3d?location={qweather_location}",
         headers={"Authorization": f"Bearer {encoded_jwt}"}
     )
 
