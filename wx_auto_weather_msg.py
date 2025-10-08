@@ -1,5 +1,4 @@
 import httpx
-import json
 from apscheduler.schedulers.blocking import BlockingScheduler
 import time
 import jwt
@@ -10,6 +9,7 @@ import sys
 # 加载环境变量
 load_dotenv()
 
+
 # 从环境变量获取和风天气相关配置项
 api_host = os.getenv("API_HOST")
 private_key = os.getenv("QWEATHER_PRIVATE_KEY")
@@ -18,6 +18,7 @@ qweather_kid = os.getenv("QWEATHER_KID")
 
 # 企业微信机器人配置
 webhook_url = os.getenv("WECHAT_WEBHOOK_URL")
+
 
 # 检查必需的环境变量
 def check_environment_variables():
@@ -35,6 +36,7 @@ def check_environment_variables():
     if missing_vars:
         print(f"错误：缺少必需的环境变量: {', '.join(missing_vars)}")
         sys.exit(1)
+
 
 def get_payload() -> dict:
     """生成JWT payload"""
